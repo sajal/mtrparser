@@ -16,14 +16,28 @@ type MtrHop struct {
 	SD       time.Duration //TODO: Calculate this
 	Sent     int
 	Received int
+	Last     time.Duration
+	Best     time.Duration
+	Worst    time.Duration
 }
 
 func (hop *MtrHop) Summarize() {
 	//After the Timings block has been populated.
 	hop.Sent = 10
 	hop.Received = len(hop.Timings)
+	if len(hop.Timings) > 0 {
+		hop.Last = hop.Timings[len(hop.Timings)-1]
+		hop.Best = hop.Timings[0]
+		hop.Worst = hop.Timings[0]
+	}
 	for _, t := range hop.Timings {
 		hop.Avg += t / time.Duration(hop.Received)
+		if hop.Best > t {
+			hop.Best = t
+		}
+		if hop.Worst < t {
+			hop.Worst = t
+		}
 	}
 	hop.Loss = (float64(hop.Sent-hop.Received) / float64(hop.Sent)) * 100
 }
