@@ -1,7 +1,6 @@
 package mtrparser
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -65,7 +64,7 @@ func NewMTROutPut(raw string, count int) (*MTROutPut, error) {
 			//log.Println(things)
 			idx, err := strconv.Atoi(things[1])
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 			data := rawhop{
 				datatype: things[0],
@@ -95,7 +94,7 @@ func NewMTROutPut(raw string, count int) (*MTROutPut, error) {
 		case "p":
 			t, err := strconv.Atoi(data.value)
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 			out.Hops[data.idx].Timings = append(out.Hops[data.idx].Timings, time.Duration(t)*time.Microsecond)
 		}
