@@ -40,7 +40,7 @@ type rawhop struct {
 }
 
 func NewMTROutPut(raw string) (*MTROutPut, error) {
-	//I dont know why last hop comes in multiple times...
+	//last hop comes in multiple times... https://github.com/traviscross/mtr/blob/master/FORMATS
 	out := &MTROutPut{}
 	rawhops := make([]rawhop, 0)
 	//Store each line of output in rawhop structure
@@ -85,6 +85,16 @@ func NewMTROutPut(raw string) (*MTROutPut, error) {
 			out.Hops[data.idx].Timings = append(out.Hops[data.idx].Timings, time.Duration(t)*time.Microsecond)
 		}
 	}
+	//Filter dupe last hops
+	finalidx := 0
+	previousip := ""
+	for idx, hop := range out.Hops {
+		if hop.IP != previousip {
+			previousip = hop.IP
+			finalidx = idx + 1
+		}
+	}
+	out.Hops = out.Hops[0:finalidx]
 	for _, hop := range out.Hops {
 		hop.Summarize()
 	}
