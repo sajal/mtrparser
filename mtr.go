@@ -28,7 +28,7 @@ type MtrHop struct {
 	Host     string
 	Timings  []time.Duration //In Json they become nanosecond
 	Avg      time.Duration
-	Loss     float64
+	Loss     int
 	SD       time.Duration //TODO: Calculate this
 	Sent     int
 	Received int
@@ -56,7 +56,7 @@ func (hop *MtrHop) Summarize(count int) {
 		}
 	}
 	hop.SD = stdDev(hop.Timings, hop.Avg)
-	hop.Loss = (float64(hop.Sent-hop.Received) / float64(hop.Sent)) * 100
+	hop.Loss = (100 * (hop.Sent-hop.Received)) / hop.Sent
 }
 
 type MTROutPut struct {
