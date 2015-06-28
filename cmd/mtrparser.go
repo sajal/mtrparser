@@ -5,7 +5,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/sajal/mtrparser/mtr"
+	"github.com/sajal/mtrparser"
 	"io/ioutil"
 	"log"
 	"os"
