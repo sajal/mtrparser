@@ -30,6 +30,6 @@ func main() {
 	fmt.Println(string(b))
 	fmt.Println("Line by line")
 	for idx, item := range result.Hops {
-		fmt.Printf("%v : %s (%s) Avg: %v, Loss : %v%% Best: %v Worst: %v Last: %v\n", idx+1, item.Host, item.IP, item.Avg, item.Loss, item.Best, item.Worst, item.Last)
+		fmt.Printf("%v : %s (%s) Avg: %v, Loss : %v%% Best: %v Worst: %v Last: %v stdDev: %v\n", idx+1, item.Host, item.IP, item.Avg, item.Loss, item.Best, item.Worst, item.Last, item.SD)
 	}
 }

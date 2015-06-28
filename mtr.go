@@ -1,10 +1,27 @@
 package mtrparser
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"time"
 )
+
+func stdDev(timings []time.Duration, avg time.Duration) time.Duration {
+	//taken from https://github.com/ae6rt/golang-examples/blob/master/goeg/src/statistics_ans/statistics.go
+	if len(timings) < 2 {
+		return time.Duration(0)
+	}
+	mean := float64(avg)
+	total := 0.0
+	for _, t := range timings {
+		number := float64(t)
+		total += math.Pow(number-mean, 2)
+	}
+	variance := total / float64(len(timings)-1)
+	std := math.Sqrt(variance)
+	return time.Duration(std)
+}
 
 type MtrHop struct {
 	IP       string
@@ -38,6 +55,7 @@ func (hop *MtrHop) Summarize(count int) {
 			hop.Worst = t
 		}
 	}
+	hop.SD = stdDev(hop.Timings, hop.Avg)
 	hop.Loss = (float64(hop.Sent-hop.Received) / float64(hop.Sent)) * 100
 }
 
