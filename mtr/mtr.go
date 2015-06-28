@@ -21,9 +21,9 @@ type MtrHop struct {
 	Worst    time.Duration
 }
 
-func (hop *MtrHop) Summarize() {
+func (hop *MtrHop) Summarize(count int) {
 	//After the Timings block has been populated.
-	hop.Sent = 10
+	hop.Sent = count
 	hop.Received = len(hop.Timings)
 	if len(hop.Timings) > 0 {
 		hop.Last = hop.Timings[len(hop.Timings)-1]
@@ -53,7 +53,8 @@ type rawhop struct {
 	value    string
 }
 
-func NewMTROutPut(raw string) (*MTROutPut, error) {
+//raw is the output from mtr command, count is the -c argument, default 10 in mtr
+func NewMTROutPut(raw string, count int) (*MTROutPut, error) {
 	//last hop comes in multiple times... https://github.com/traviscross/mtr/blob/master/FORMATS
 	out := &MTROutPut{}
 	rawhops := make([]rawhop, 0)
@@ -110,7 +111,7 @@ func NewMTROutPut(raw string) (*MTROutPut, error) {
 	}
 	out.Hops = out.Hops[0:finalidx]
 	for _, hop := range out.Hops {
-		hop.Summarize()
+		hop.Summarize(count)
 	}
 	return out, nil
 }

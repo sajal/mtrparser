@@ -16,7 +16,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	result, err := mtrparser.NewMTROutPut(string(bytes))
+	result, err := mtrparser.NewMTROutPut(string(bytes), 10)
 	if err != nil {
 		log.Fatal(err)
 	}
