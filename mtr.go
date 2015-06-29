@@ -24,8 +24,8 @@ func stdDev(timings []time.Duration, avg time.Duration) time.Duration {
 }
 
 type MtrHop struct {
-	IP       string
-	Host     string
+	IP       []string
+	Host     []string
 	Timings  []time.Duration //In Json they become nanosecond
 	Avg      time.Duration
 	Loss     int
@@ -56,7 +56,7 @@ func (hop *MtrHop) Summarize(count int) {
 		}
 	}
 	hop.SD = stdDev(hop.Timings, hop.Avg)
-	hop.Loss = (100 * (hop.Sent-hop.Received)) / hop.Sent
+	hop.Loss = (100 * (hop.Sent - hop.Received)) / hop.Sent
 }
 
 type MTROutPut struct {
@@ -100,15 +100,18 @@ func NewMTROutPut(raw string, count int) (*MTROutPut, error) {
 	for idx, _ := range out.Hops {
 		out.Hops[idx] = &MtrHop{
 			Timings: make([]time.Duration, 0),
+			IP:      make([]string, 0),
+			Host:    make([]string, 0),
 		}
 		//hop.Timings = make([]time.Duration, 0)
 	}
 	for _, data := range rawhops {
 		switch data.datatype {
 		case "h":
-			out.Hops[data.idx].IP = data.value
+			out.Hops[data.idx].IP = append(out.Hops[data.idx].IP, data.value)
 		case "d":
-			out.Hops[data.idx].Host = data.value
+			//Not entirely sure if multiple IPs. Better use -n in mtr and resolve later in summarize.
+			out.Hops[data.idx].Host = append(out.Hops[data.idx].Host, data.value)
 		case "p":
 			t, err := strconv.Atoi(data.value)
 			if err != nil {
@@ -121,9 +124,11 @@ func NewMTROutPut(raw string, count int) (*MTROutPut, error) {
 	finalidx := 0
 	previousip := ""
 	for idx, hop := range out.Hops {
-		if hop.IP != previousip {
-			previousip = hop.IP
-			finalidx = idx + 1
+		if len(hop.IP) > 0 {
+			if hop.IP[0] != previousip {
+				previousip = hop.IP[0]
+				finalidx = idx + 1
+			}
 		}
 	}
 	out.Hops = out.Hops[0:finalidx]
