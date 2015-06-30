@@ -122,9 +122,9 @@ func NewMTROutPut(raw string, count int) (*MTROutPut, error) {
 		switch data.datatype {
 		case "h":
 			out.Hops[data.idx].IP = append(out.Hops[data.idx].IP, data.value)
-		case "d":
+		//case "d":
 			//Not entirely sure if multiple IPs. Better use -n in mtr and resolve later in summarize.
-			out.Hops[data.idx].Host = append(out.Hops[data.idx].Host, data.value)
+			//out.Hops[data.idx].Host = append(out.Hops[data.idx].Host, data.value)
 		case "p":
 			t, err := strconv.Atoi(data.value)
 			if err != nil {
