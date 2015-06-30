@@ -5,6 +5,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/abh/geoip"
 	"github.com/sajal/mtrparser"
 	"log"
 	"os"
@@ -24,6 +25,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	gia, err := geoip.OpenType(geoip.GEOIP_ASNUM_EDITION)
+	if err != nil {
+		log.Println(err)
+		gia = nil
+	}
+	log.Println(gia)
+	for _, hop := range result.Hops {
+		hop.Summarize(10, gia)
+	}
+
 	fmt.Println("Result")
 	fmt.Println(result)
 	fmt.Println("Json")
@@ -34,6 +45,6 @@ func main() {
 	fmt.Println(string(b))
 	fmt.Println("Line by line")
 	for idx, item := range result.Hops {
-		fmt.Printf("%v : %s (%s) Avg: %v, Loss : %v%% Best: %v Worst: %v Last: %v stdDev: %v\n", idx+1, item.Host, item.IP, item.Avg, item.Loss, item.Best, item.Worst, item.Last, item.SD)
+		fmt.Printf("%v : %s %s (%s) Avg: %v, Loss : %v%% Best: %v Worst: %v Last: %v stdDev: %v\n", idx+1, item.Host, item.ASN, item.IP, item.Avg, item.Loss, item.Best, item.Worst, item.Last, item.SD)
 	}
 }

@@ -3,6 +3,7 @@ package mtrparser
 import (
 	"bytes"
 	"errors"
+	"github.com/abh/geoip"
 	"math"
 	"net"
 	"os/exec"
@@ -42,7 +43,7 @@ type MtrHop struct {
 	Worst    time.Duration
 }
 
-func (hop *MtrHop) Summarize(count int) {
+func (hop *MtrHop) Summarize(count int, gia *geoip.GeoIP) {
 	//After the Timings block has been populated.
 	hop.Sent = count
 	hop.Received = len(hop.Timings)
@@ -63,6 +64,13 @@ func (hop *MtrHop) Summarize(count int) {
 	hop.SD = stdDev(hop.Timings, hop.Avg)
 	hop.Loss = (100 * (hop.Sent - hop.Received)) / hop.Sent
 	//Populate ips
+	hop.ResolveIPs()
+	if gia != nil {
+		hop.ResolveASN(gia)
+	}
+}
+
+func (hop *MtrHop) ResolveIPs() {
 	hop.Host = make([]string, len(hop.IP))
 	for idx, ip := range hop.IP {
 		addr, err := net.LookupAddr(ip)
@@ -72,6 +80,25 @@ func (hop *MtrHop) Summarize(count int) {
 				hop.Host[idx] = addr[0]
 			}
 		}
+	}
+}
+
+func getasn(ip string, gia *geoip.GeoIP) string {
+	asntmp, _ := gia.GetName(ip)
+	if asntmp != "" {
+		splitted := strings.SplitN(asntmp, " ", 2)
+		if len(splitted) == 2 {
+			return splitted[0]
+		}
+	}
+	return ""
+}
+
+func (hop *MtrHop) ResolveASN(gia *geoip.GeoIP) {
+	hop.ASN = make([]string, len(hop.IP))
+	for idx, ip := range hop.IP {
+		//TODO...
+		hop.ASN[idx] = getasn(ip, gia)
 	}
 }
 
@@ -85,6 +112,12 @@ type rawhop struct {
 	datatype string
 	idx      int
 	value    string
+}
+
+func (result *MTROutPut) Summarize(count int, gia *geoip.GeoIP) {
+	for _, hop := range result.Hops {
+		hop.Summarize(count, gia)
+	}
 }
 
 //raw is the output from mtr command, count is the -c argument, default 10 in mtr
@@ -150,9 +183,6 @@ func NewMTROutPut(raw, target string, count int) (*MTROutPut, error) {
 		}
 	}
 	out.Hops = out.Hops[0:finalidx]
-	for _, hop := range out.Hops {
-		hop.Summarize(count)
-	}
 	return out, nil
 }
 
