@@ -3,7 +3,6 @@ package mtrparser
 import (
 	"bytes"
 	"errors"
-	"github.com/abh/geoip"
 	"math"
 	"net"
 	"os/exec"
@@ -43,7 +42,7 @@ type MtrHop struct {
 	Worst    time.Duration
 }
 
-func (hop *MtrHop) Summarize(count int, gia *geoip.GeoIP) {
+func (hop *MtrHop) Summarize(count int) {
 	//After the Timings block has been populated.
 	hop.Sent = count
 	hop.Received = len(hop.Timings)
@@ -65,9 +64,6 @@ func (hop *MtrHop) Summarize(count int, gia *geoip.GeoIP) {
 	hop.Loss = (100 * (hop.Sent - hop.Received)) / hop.Sent
 	//Populate ips
 	hop.ResolveIPs()
-	if gia != nil {
-		hop.ResolveASN(gia)
-	}
 }
 
 func (hop *MtrHop) ResolveIPs() {
@@ -83,25 +79,6 @@ func (hop *MtrHop) ResolveIPs() {
 	}
 }
 
-func getasn(ip string, gia *geoip.GeoIP) string {
-	asntmp, _ := gia.GetName(ip)
-	if asntmp != "" {
-		splitted := strings.SplitN(asntmp, " ", 2)
-		if len(splitted) == 2 {
-			return splitted[0]
-		}
-	}
-	return ""
-}
-
-func (hop *MtrHop) ResolveASN(gia *geoip.GeoIP) {
-	hop.ASN = make([]string, len(hop.IP))
-	for idx, ip := range hop.IP {
-		//TODO...
-		hop.ASN[idx] = getasn(ip, gia)
-	}
-}
-
 type MTROutPut struct {
 	Hops     []*MtrHop
 	Target   string //Saving this FYI
@@ -114,9 +91,9 @@ type rawhop struct {
 	value    string
 }
 
-func (result *MTROutPut) Summarize(count int, gia *geoip.GeoIP) {
+func (result *MTROutPut) Summarize(count int) {
 	for _, hop := range result.Hops {
-		hop.Summarize(count, gia)
+		hop.Summarize(count)
 	}
 }
 
