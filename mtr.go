@@ -2,6 +2,7 @@ package mtrparser
 
 import (
 	"math"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -26,10 +27,11 @@ func stdDev(timings []time.Duration, avg time.Duration) time.Duration {
 type MtrHop struct {
 	IP       []string
 	Host     []string
+	ASN      []string
 	Timings  []time.Duration //In Json they become nanosecond
 	Avg      time.Duration
 	Loss     int
-	SD       time.Duration //TODO: Calculate this
+	SD       time.Duration
 	Sent     int
 	Received int
 	Last     time.Duration
@@ -57,6 +59,17 @@ func (hop *MtrHop) Summarize(count int) {
 	}
 	hop.SD = stdDev(hop.Timings, hop.Avg)
 	hop.Loss = (100 * (hop.Sent - hop.Received)) / hop.Sent
+	//Populate ips
+	hop.Host = make([]string, len(hop.IP))
+	for idx, ip := range hop.IP {
+		addr, err := net.LookupAddr(ip)
+		if err == nil {
+			//log.Println(addr[0], err)
+			if len(addr) > 0 {
+				hop.Host[idx] = addr[0]
+			}
+		}
+	}
 }
 
 type MTROutPut struct {
