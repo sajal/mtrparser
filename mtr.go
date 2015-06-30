@@ -66,16 +66,36 @@ func (hop *MtrHop) Summarize(count int) {
 	hop.ResolveIPs()
 }
 
+type lookupresult struct {
+	addr []string
+	err  error
+}
+
+func reverselookup(ip string) string {
+	result := ""
+	ch := make(chan lookupresult, 1)
+	go func() {
+		addr, err := net.LookupAddr(ip)
+		ch <- lookupresult{addr, err}
+	}()
+	select {
+	case res := <-ch:
+		if res.err == nil {
+			//log.Println(addr[0], err)
+			if len(res.addr) > 0 {
+				result = res.addr[0]
+			}
+		}
+	case <-time.After(time.Second * 1):
+		result = ""
+	}
+	return result
+}
+
 func (hop *MtrHop) ResolveIPs() {
 	hop.Host = make([]string, len(hop.IP))
 	for idx, ip := range hop.IP {
-		addr, err := net.LookupAddr(ip)
-		if err == nil {
-			//log.Println(addr[0], err)
-			if len(addr) > 0 {
-				hop.Host[idx] = addr[0]
-			}
-		}
+		hop.Host[idx] = reverselookup(ip)
 	}
 }
 
@@ -202,7 +222,7 @@ func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
 			}
 		}
 		if realtgt == "" {
-			return nil, errors.New("No IPv4 address found")
+			return nil, errors.New("No IPv6 address found")
 		}
 		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", "-6", realtgt)
 	default:
