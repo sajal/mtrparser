@@ -1,8 +1,11 @@
 package mtrparser
 
 import (
+	"bytes"
+	"errors"
 	"math"
 	"net"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -74,6 +77,7 @@ func (hop *MtrHop) Summarize(count int) {
 
 type MTROutPut struct {
 	Hops     []*MtrHop
+	Target   string //Saving this FYI
 	HopCount int
 }
 
@@ -84,9 +88,10 @@ type rawhop struct {
 }
 
 //raw is the output from mtr command, count is the -c argument, default 10 in mtr
-func NewMTROutPut(raw string, count int) (*MTROutPut, error) {
+func NewMTROutPut(raw, target string, count int) (*MTROutPut, error) {
 	//last hop comes in multiple times... https://github.com/traviscross/mtr/blob/master/FORMATS
 	out := &MTROutPut{}
+	out.Target = target
 	rawhops := make([]rawhop, 0)
 	//Store each line of output in rawhop structure
 	for _, line := range strings.Split(raw, "\n") {
@@ -123,8 +128,8 @@ func NewMTROutPut(raw string, count int) (*MTROutPut, error) {
 		case "h":
 			out.Hops[data.idx].IP = append(out.Hops[data.idx].IP, data.value)
 		//case "d":
-			//Not entirely sure if multiple IPs. Better use -n in mtr and resolve later in summarize.
-			//out.Hops[data.idx].Host = append(out.Hops[data.idx].Host, data.value)
+		//Not entirely sure if multiple IPs. Better use -n in mtr and resolve later in summarize.
+		//out.Hops[data.idx].Host = append(out.Hops[data.idx].Host, data.value)
 		case "p":
 			t, err := strconv.Atoi(data.value)
 			if err != nil {
@@ -149,4 +154,62 @@ func NewMTROutPut(raw string, count int) (*MTROutPut, error) {
 		hop.Summarize(count)
 	}
 	return out, nil
+}
+
+//Execute mtr command and return parsed output
+func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
+	//Validate r.Target before sending
+	tgt := strings.Trim(target, "\n \r") //Trim whitespace
+	if strings.Contains(tgt, " ") {      //Ensure it doesnt contain space
+		return nil, errors.New("Invalid hostname")
+	}
+	if strings.HasPrefix(tgt, "-") { //Ensure it doesnt start with -
+		return nil, errors.New("Invalid hostname")
+	}
+	addrs, err := net.LookupIP(tgt)
+	if err != nil {
+		return nil, err
+	}
+	if len(addrs) == 0 {
+		return nil, errors.New("Host not found")
+	}
+	var cmd *exec.Cmd
+	realtgt := ""
+	switch IPv {
+	case "4":
+		for _, ip := range addrs {
+			i := ip.To4()
+			if i != nil {
+				realtgt = i.String()
+			}
+		}
+		if realtgt == "" {
+			return nil, errors.New("No IPv4 address found")
+		}
+		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", "-4", realtgt)
+	case "6":
+		for _, ip := range addrs {
+			i := ip.To16()
+			if i != nil {
+				realtgt = i.String()
+			}
+		}
+		if realtgt == "" {
+			return nil, errors.New("No IPv4 address found")
+		}
+		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", "-6", realtgt)
+	default:
+		realtgt = addrs[0].String() //Choose first addr..
+		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", realtgt)
+	}
+
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err = cmd.Run()
+	if err != nil {
+		return nil, errors.New(stderr.String())
+	}
+	return NewMTROutPut(out.String(), realtgt, 10)
 }

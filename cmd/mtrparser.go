@@ -1,22 +1,26 @@
 package main
 
-//usage: mtr --report --raw <hostname or ip> | go run mtrparser.go
+//usage: go run mtrparser.go <hostname or ip>
 
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/sajal/mtrparser"
-	"io/ioutil"
 	"log"
 	"os"
 )
 
 func main() {
-	bytes, err := ioutil.ReadAll(os.Stdin)
-	if err != nil {
-		log.Fatal(err)
+	if len(os.Args) < 2 {
+		log.Fatal("Need mtr destination")
 	}
-	result, err := mtrparser.NewMTROutPut(string(bytes), 10)
+	target := os.Args[1]
+	ipv := ""
+	if len(os.Args) > 2 {
+		ipv = os.Args[2]
+	}
+	log.Println(target, ipv)
+	result, err := mtrparser.ExecuteMTR(target, ipv)
 	if err != nil {
 		log.Fatal(err)
 	}
