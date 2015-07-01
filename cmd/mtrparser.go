@@ -9,7 +9,27 @@ import (
 	"github.com/sajal/mtrparser"
 	"log"
 	"os"
+	"strings"
 )
+
+func getasnmtr(ip string, gia *geoip.GeoIP) string {
+	asntmp, _ := gia.GetName(ip)
+	if asntmp != "" {
+		splitted := strings.SplitN(asntmp, " ", 2)
+		if len(splitted) == 2 {
+			return splitted[0]
+		}
+	}
+	return ""
+}
+
+func ResolveASNMtr(hop *mtrparser.MtrHop, gia *geoip.GeoIP) {
+	hop.ASN = make([]string, len(hop.IP))
+	for idx, ip := range hop.IP {
+		//TODO...
+		hop.ASN[idx] = getasnmtr(ip, gia)
+	}
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -32,9 +52,11 @@ func main() {
 	}
 	log.Println(gia)
 	for _, hop := range result.Hops {
-		hop.Summarize(10, gia)
+		hop.Summarize(10)
 	}
-
+	for _, hop := range result.Hops {
+		ResolveASNMtr(hop, gia)
+	}
 	fmt.Println("Result")
 	fmt.Println(result)
 	fmt.Println("Json")
