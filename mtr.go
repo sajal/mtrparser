@@ -11,6 +11,34 @@ import (
 	"time"
 )
 
+func doesipv6() bool {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return false
+	}
+	localipv6 := []string{"fc00::/7", "::1/128", "fe80::/10"}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			ip6 := ipnet.IP.To16()
+			ip4 := ipnet.IP.To4()
+			if ip6 != nil && ip4 == nil {
+				local := false
+				for _, r := range localipv6 {
+					_, cidr, _ := net.ParseCIDR(r)
+					if cidr.Contains(ip6) {
+						local = true
+					}
+				}
+				if !local {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 func stdDev(timings []time.Duration, avg time.Duration) time.Duration {
 	//taken from https://github.com/ae6rt/golang-examples/blob/master/goeg/src/statistics_ans/statistics.go
 	if len(timings) < 2 {
@@ -193,21 +221,40 @@ func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
 	if strings.HasPrefix(tgt, "-") { //Ensure it doesnt start with -
 		return nil, errors.New("Invalid hostname")
 	}
-	addrs, err := net.LookupIP(tgt)
-	if err != nil {
-		return nil, err
+	realtgt := ""
+	parsed := net.ParseIP(tgt)
+	if parsed != nil {
+		realtgt = tgt
 	}
-	if len(addrs) == 0 {
-		return nil, errors.New("Host not found")
+	var addrs []net.IP
+	var err error
+	if realtgt == "" {
+		addrs, err = net.LookupIP(tgt)
+		if err != nil {
+			return nil, err
+		}
+		if len(addrs) == 0 {
+			return nil, errors.New("Host not found")
+		}
 	}
 	var cmd *exec.Cmd
-	realtgt := ""
+	/*
+		if IPv == "" {
+			if doesipv6() {
+				IPv = "6"
+			} else {
+				IPv = "4"
+			}
+		}
+	*/
 	switch IPv {
 	case "4":
-		for _, ip := range addrs {
-			i := ip.To4()
-			if i != nil {
-				realtgt = i.String()
+		if realtgt == "" {
+			for _, ip := range addrs {
+				i := ip.To4()
+				if i != nil {
+					realtgt = i.String()
+				}
 			}
 		}
 		if realtgt == "" {
@@ -215,10 +262,12 @@ func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
 		}
 		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", "-4", realtgt)
 	case "6":
-		for _, ip := range addrs {
-			i := ip.To16()
-			if i != nil {
-				realtgt = i.String()
+		if realtgt == "" {
+			for _, ip := range addrs {
+				i := ip.To16()
+				if i != nil {
+					realtgt = i.String()
+				}
 			}
 		}
 		if realtgt == "" {
@@ -226,7 +275,28 @@ func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
 		}
 		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", "-6", realtgt)
 	default:
-		realtgt = addrs[0].String() //Choose first addr..
+		if realtgt == "" {
+			if doesipv6() {
+				for _, ip := range addrs {
+					i := ip.To16()
+					if i != nil {
+						realtgt = i.String()
+					}
+				}
+			}
+			if realtgt == "" {
+				for _, ip := range addrs {
+					i := ip.To4()
+					if i != nil {
+						realtgt = i.String()
+					}
+				}
+			}
+		}
+		if realtgt == "" {
+			return nil, errors.New("No IP address found")
+		}
+		//realtgt = addrs[0].String() //Choose first addr..
 		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", realtgt)
 	}
 
