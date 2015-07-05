@@ -70,6 +70,7 @@ type MtrHop struct {
 	Worst    time.Duration
 }
 
+//Summarize calculates various statistics for each Hop
 func (hop *MtrHop) Summarize(count int) {
 	//After the Timings block has been populated.
 	hop.Sent = count
@@ -120,6 +121,7 @@ func reverselookup(ip string) string {
 	return result
 }
 
+//ResolveIPs populates the DNS hostnames of the IP in each Hop.
 func (hop *MtrHop) ResolveIPs() {
 	hop.Host = make([]string, len(hop.IP))
 	for idx, ip := range hop.IP {
@@ -139,12 +141,14 @@ type rawhop struct {
 	value    string
 }
 
+//Summarize calls Summarize on each Hop
 func (result *MTROutPut) Summarize(count int) {
 	for _, hop := range result.Hops {
 		hop.Summarize(count)
 	}
 }
 
+//NewMTROutPut can be used to parse output of mtr --raw <target ip> .
 //raw is the output from mtr command, count is the -c argument, default 10 in mtr
 func NewMTROutPut(raw, target string, count int) (*MTROutPut, error) {
 	//last hop comes in multiple times... https://github.com/traviscross/mtr/blob/master/FORMATS
