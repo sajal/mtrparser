@@ -269,7 +269,7 @@ func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
 		if realtgt == "" {
 			for _, ip := range addrs {
 				i := ip.To16()
-				if i != nil {
+				if i != nil && ip.To4() == nil { //Explicitly check if its not v4
 					realtgt = i.String()
 				}
 			}
