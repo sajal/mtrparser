@@ -158,7 +158,7 @@ func NewMTROutPut(raw, target string, count int) (*MTROutPut, error) {
 	//Store each line of output in rawhop structure
 	for _, line := range strings.Split(raw, "\n") {
 		things := strings.Split(line, " ")
-		if len(things) == 3 {
+		if len(things) == 3 || (len(things) == 4 && things[0] == "p") {
 			//log.Println(things)
 			idx, err := strconv.Atoi(things[1])
 			if err != nil {
