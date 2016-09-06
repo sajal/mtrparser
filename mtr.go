@@ -164,10 +164,11 @@ func durms(d time.Duration) float64 {
 
 //String returns output similar to --report option in mtr
 func (result *MTROutPut) String() string {
-	output := fmt.Sprintf("HOST: %sLoss%%   Snt   Last   Avg  Best  Wrst StDev", trimpad("fofofofo", 40))
+	output := fmt.Sprintf("HOST: %sLoss%%   Snt   Last   Avg  Best  Wrst StDev", trimpad("TODO hostname", 40))
 	for i, hop := range result.Hops {
 		h := "???"
 		if len(hop.IP) > 0 {
+			//fmt.Println(hop.Host, hop.IP)
 			h = hop.Host[0]
 			if h == "" {
 				h = hop.IP[0]
