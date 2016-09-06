@@ -3,6 +3,7 @@ package mtrparser
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math"
 	"net"
 	"os/exec"
@@ -146,6 +147,35 @@ func (result *MTROutPut) Summarize(count int) {
 	for _, hop := range result.Hops {
 		hop.Summarize(count)
 	}
+}
+
+//Helper function to trim or pad a string
+func trimpad(input string, size int) string {
+	if len(input) > size {
+		input = input[0:size]
+	}
+	return fmt.Sprintf("%[1]*[2]s ", size*-1, input)
+}
+
+//Return milliseconds as floating point from duration
+func durms(d time.Duration) float64 {
+	return float64(d.Nanoseconds()) / (1000 * 1000)
+}
+
+//String returns output similar to --report option in mtr
+func (result *MTROutPut) String() string {
+	output := fmt.Sprintf("HOST: %sLoss%%   Snt   Last   Avg  Best  Wrst StDev", trimpad("fofofofo", 40))
+	for i, hop := range result.Hops {
+		h := "???"
+		if len(hop.IP) > 0 {
+			h = hop.Host[0]
+			if h == "" {
+				h = hop.IP[0]
+			}
+		}
+		output = fmt.Sprintf("%s\n%2d.|-- %s%3d.0%%   %3d  %5.1f %5.1f %5.1f %5.1f %5.1f", output, i, trimpad(h, 38), hop.Loss, hop.Sent, durms(hop.Last), durms(hop.Avg), durms(hop.Best), durms(hop.Worst), durms(hop.SD))
+	}
+	return output
 }
 
 //NewMTROutPut can be used to parse output of mtr --raw <target ip> .

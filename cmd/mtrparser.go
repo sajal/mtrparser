@@ -69,4 +69,6 @@ func main() {
 	for idx, item := range result.Hops {
 		fmt.Printf("%v : %s %s (%s) Avg: %v, Loss : %v%% Best: %v Worst: %v Last: %v stdDev: %v\n", idx+1, item.Host, item.ASN, item.IP, item.Avg, item.Loss, item.Best, item.Worst, item.Last, item.SD)
 	}
+	fmt.Println("mtr --report like output")
+	fmt.Println(result.String())
 }
