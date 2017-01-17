@@ -2,6 +2,7 @@ package mtrparser
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -248,6 +249,12 @@ func NewMTROutPut(raw, target string, count int) (*MTROutPut, error) {
 
 //Execute mtr command and return parsed output
 func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
+	return ExecuteMTRContext(context.Background(), target, IPv)
+}
+
+//Execute mtr command and return parsed output,
+//killing the process if context becomes done before command completes.
+func ExecuteMTRContext(ctx context.Context, target string, IPv string) (*MTROutPut, error) {
 	//Validate r.Target before sending
 	tgt := strings.Trim(target, "\n \r") //Trim whitespace
 	if strings.Contains(tgt, " ") {      //Ensure it doesnt contain space
@@ -295,7 +302,7 @@ func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
 		if realtgt == "" {
 			return nil, errors.New("No IPv4 address found")
 		}
-		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", "-4", realtgt)
+		cmd = exec.CommandContext(ctx, "mtr", "--raw", "-n", "-c", "10", "-4", realtgt)
 	case "6":
 		if realtgt == "" {
 			for _, ip := range addrs {
@@ -308,7 +315,7 @@ func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
 		if realtgt == "" {
 			return nil, errors.New("No IPv6 address found")
 		}
-		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", "-6", realtgt)
+		cmd = exec.CommandContext(ctx, "mtr", "--raw", "-n", "-c", "10", "-6", realtgt)
 	default:
 		if realtgt == "" {
 			if doesipv6() {
@@ -332,7 +339,7 @@ func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
 			return nil, errors.New("No IP address found")
 		}
 		//realtgt = addrs[0].String() //Choose first addr..
-		cmd = exec.Command("mtr", "--raw", "-n", "-c", "10", realtgt)
+		cmd = exec.CommandContext(ctx, "mtr", "--raw", "-n", "-c", "10", realtgt)
 	}
 
 	var out bytes.Buffer
@@ -341,6 +348,11 @@ func ExecuteMTR(target string, IPv string) (*MTROutPut, error) {
 	cmd.Stderr = &stderr
 	err = cmd.Run()
 	if err != nil {
+		if ctx.Err() != nil {
+			// Process was killed by context
+			return nil, ctx.Err()
+		}
+		// Process finished with error code
 		return nil, errors.New(stderr.String())
 	}
 	return NewMTROutPut(out.String(), realtgt, 10)
